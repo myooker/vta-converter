@@ -11,9 +11,8 @@ int main() {
         std::cerr << "Unable to open video file" << std::endl;
     }
 
-    // cv::namedWindow("Image", cv::WINDOW_NORMAL);
-    // cv::resizeWindow("Image", 1080, 1920);
-    // cv::imshow("Image",frame);
+    const double videoFps{ video.get(cv::CAP_PROP_FPS)};
+    std::cout << "video's fps: " << videoFps << '\n';
 
     while (true) {
         video.read(frame);
@@ -25,15 +24,9 @@ int main() {
         cv::namedWindow("Video", cv::WINDOW_NORMAL);
         cv::resizeWindow("Video", 504, 896);
         cv::imshow("Video", frame);
-        if (cv::waitKey(15) >= 0)
+        if (cv::waitKey(15) >= 0) // Have no idea
             break;
     }
-
-    // // Exit program only when 'q' is pressed
-    // while (true) {
-    //     int key = cv::waitKey(0);
-    //     if (key == 'q') break;
-    // }
 
     video.release();
 
