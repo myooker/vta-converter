@@ -3,33 +3,57 @@
 #include <opencv4/opencv2/imgproc.hpp>
 #include <opencv4/opencv2/videoio.hpp>
 
+
+namespace vta {
+    constexpr std::string_view palette{" .:-=+*#%@"}; // From lightest to darker
+    const cv::Mat frame{ cv::imread("/home/myooker/Pictures/badapple.jpg", cv::IMREAD_REDUCED_GRAYSCALE_8) };
+}
+
+enum Constants {
+    MAX_GRAY_VALUE = 255,
+};
+
+std::size_t getPaletteIndex(const unsigned int pixelColor) {
+    return (pixelColor * (vta::palette.size()-1) / MAX_GRAY_VALUE);
+}
+
+std::string convertRow(const cv::Mat& frame, int govno) {
+    if (frame.empty()) {
+        std::cerr << "Error! No image detected!\nExiting the program..." << std::endl;
+        std::exit(1);
+    }
+
+    uchar* ptr = frame.data;
+    const std::size_t rowSize{ static_cast<std::size_t>(frame.rows - 1) };
+    std::string asciiRow{};
+
+    for (std::size_t i{}; i <= rowSize; i++) {
+        // constexpr int defaultRow{ 0 };
+        unsigned int pixelValue{};
+        pixelValue = frame.at<uchar>(govno, static_cast<int>(i));
+        asciiRow.push_back(vta::palette[getPaletteIndex(pixelValue)]);
+    }
+
+    return asciiRow;
+}
+
 int main() {
-    cv::VideoCapture video{"/home/myooker/Downloads/output.mp4"};
-    cv::Mat frame{};
+    std::cout << "Number of rows: " << vta::frame.rows << '\n';
+    std::cout << "Number of columns: " << vta::frame.cols << '\n';
 
-    if (!video.isOpened()) {
-        std::cerr << "Unable to open video file" << std::endl;
+    for (int i{}; i < vta::frame.cols; i++) {
+        std::cout << convertRow(vta::frame, i) << '\n';
     }
 
-    const double videoFps{ video.get(cv::CAP_PROP_FPS)};
-    std::cout << "video's fps: " << videoFps << '\n';
+    // int key{};
+    // while (true) {
+    //     key = cv::waitKey(0);
+    //     if (key == 'q') {
+    //         // video.release();
+    //         std::exit(0);
+    //     }
+    // }
 
-    while (true) {
-        video.read(frame); // Reads video's frame and place it to frame (as an out parameter)
-        cv::cvtColor(frame, frame, cv::COLOR_RGB2GRAY); // Convert RGB color of video's frame to GRAY
-
-        if (frame.empty()) {
-            std::cerr << "Error! Blank frame grabbed\n";
-            break;
-        }
-        cv::namedWindow("Video", cv::WINDOW_NORMAL);
-        cv::resizeWindow("Video", 504, 896);
-        cv::imshow("Video", frame);
-        if (cv::waitKey(15) >= 0) // Have no idea
-            break;
-    }
-
-    video.release();
 
     return 0;
 }
