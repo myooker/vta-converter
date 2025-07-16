@@ -1,7 +1,7 @@
 #include <iostream>
 #include <opencv4/opencv2/highgui.hpp>
-#include <opencv4/opencv2/videoio/videoio.hpp>
-
+#include <opencv4/opencv2/imgproc.hpp>
+#include <opencv4/opencv2/videoio.hpp>
 
 int main() {
     cv::VideoCapture video{"/home/myooker/Downloads/output.mp4"};
@@ -15,7 +15,8 @@ int main() {
     std::cout << "video's fps: " << videoFps << '\n';
 
     while (true) {
-        video.read(frame);
+        video.read(frame); // Reads video's frame and place it to frame (as an out parameter)
+        cv::cvtColor(frame, frame, cv::COLOR_RGB2GRAY); // Convert RGB color of video's frame to GRAY
 
         if (frame.empty()) {
             std::cerr << "Error! Blank frame grabbed\n";
