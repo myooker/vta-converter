@@ -6,10 +6,15 @@
 
 class Video {
 private:
-    cv::VideoCapture m_video{"/home/myooker/iphone.mp4"};
-    double m_frameCount{ 300 };
-    double m_fps{ 30.0 };
+    cv::VideoCapture m_video{"/home/myooker/badapple.mp4"};
+    double m_frameCount{ 333 };
+    double m_fps{ 33.3 };
 public:
+    Video()
+        : m_frameCount{ m_video.get(cv::CAP_PROP_FRAME_COUNT)}, m_fps{ m_video.get(cv::CAP_PROP_FPS)}
+    {
+    }
+
     explicit Video(const std::string& path)
         : m_video{ path }, m_frameCount{ m_video.get(cv::CAP_PROP_FRAME_COUNT) }, m_fps{ m_video.get(cv::CAP_PROP_FPS)}
     {

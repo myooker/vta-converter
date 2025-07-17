@@ -17,21 +17,23 @@ namespace vta {
             "/home/myooker/Pictures/smart dude with glasses wallpaper.png",
             cv::IMREAD_REDUCED_GRAYSCALE_8)
     };
-
+    // As character taller than a pixel, we use this constant to decrease video's height
     constexpr double ASCII_VERTICAL_PROP = 0.5;
 
     constexpr double REDUCE_SCALE_0 = 1;
     constexpr double REDUCE_SCALE_2 = 0.5;
     constexpr double REDUCE_SCALE_4 = 0.25;
     constexpr double REDUCE_SCALE_8 = 0.125;
-
-    // cv::Mat frame{ cv::imread(getPath(), cv::IMREAD_REDUCED_GRAYSCALE_4) };
 }
+
+enum CursorToggle {
+    OFF = 0,
+    ON = 1,
+};
 
 enum Constants {
     MAX_GRAY_VALUE = 255,
 };
-
 
 std::string getPath() {
     std::string path{};
@@ -77,34 +79,52 @@ std::vector<std::string> frameConvertToAscii(const cv::Mat& frame) {
     return asciiFrame;
 }
 
-int main() {
-    // cv::resize(vta::frame, vta::frame, cv::Size(), 1, 0.5);
-    // std::cout << "Number of rows: " << vta::frame.rows << '\n';
-    // std::cout << "Number of columns: " << vta::frame.cols << '\n';
+void ansiClearScreen() {
+    std::cout << "\033[2J\033[H"; // Cleans terminal
+}
 
-    // frameConvertToAscii(vta::frame);
-    constexpr double VIDEO_SCALE { vta::REDUCE_SCALE_2 };
-    Video userVideo{ getPath() };
-    Animation asciiAnimation{};
+void ansiMoveTopLeft() {
+    std::cout << "\033[H"; // Moves terminal cursor to the top-left corner
+}
+
+void toggleCursor(const bool cursorState) {
+    if (cursorState) {
+        std::cout << "\033[?25h"; // Show cursor
+    } else {
+        std::cout << "\033[?25l"; // Hide cursor
+    }
+}
+
+// This function needed for std::atexit() to make the program restore cursor state to ON
+// After the program exit, killing, terminates and etc...
+void showCursor() {
+    std::cout << "\033[?25h" << std::flush; // Show cursor
+}
+
+int main() {
+    std::atexit(showCursor);
+
+    constexpr double VIDEO_SCALE { vta::REDUCE_SCALE_4 };   // ...SCALE_0 - No scaling; SCALE_2 - reduce scale by 1/2; SCALE_4 - reduce scale by 1/4...
+    Video userVideo{ /*getPath()*/ };
+    // Animation asciiAnimation{};
     cv::Mat testFrame{};
 
-    std::cout << "\033[?25l";
-    std::cout << "\033[2J\033[H";
-    // std::cout << std::flush;
+    toggleCursor(OFF);
+    ansiClearScreen();
 
     for (double frame{}; frame < userVideo.getFrameCount(); frame++) {
         using namespace std::chrono_literals;
-        std::this_thread::sleep_for(30ms);
-        userVideo.getVideo().read(testFrame);
+        std::this_thread::sleep_for(16.67ms);          // Timer representing rate between frames, or just FPS
+        userVideo.getVideo().read(testFrame);     // Reads 1st frame and place it to the testFrame
         cv::cvtColor(testFrame, testFrame, cv::COLOR_RGB2GRAY);
         cv::resize(testFrame, testFrame, cv::Size(), VIDEO_SCALE, VIDEO_SCALE * vta::ASCII_VERTICAL_PROP);
 
         frameConvertToAscii(testFrame);
-        std::cout << "\033[H";
+        ansiMoveTopLeft();
     }
 
-    std::cout << "\033[2J\033[H";
-    std::cout << "\033[?25h";
+    ansiClearScreen();
+    toggleCursor(ON);
     std::cout << "FPS: " << userVideo.getFps() << '\n';
     std::cout << "Frame Count: " << userVideo.getFrameCount() << std::endl;
 
