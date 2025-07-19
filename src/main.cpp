@@ -5,7 +5,10 @@
 #include <opencv4/opencv2/highgui.hpp>
 #include <opencv4/opencv2/imgproc.hpp>
 #include <opencv4/opencv2/videoio.hpp>
-#include <ncurses.h>
+
+#include <ftxui/screen/screen.hpp>
+#include <ftxui/screen/color.hpp>
+#include <ftxui/dom/elements.hpp>
 
 #include "video.h"
 #include "animation.h"
@@ -14,6 +17,7 @@ std::string getPath();
 
 namespace vta {
     constexpr std::string_view palette{" .:-=+*#%@"}; // From lightest to darker
+    constexpr std::string_view dpalette{"@%#*+=-:. "};
     // Hard-coded path to the picture.
     cv::Mat frame{
         cv::imread(
@@ -86,10 +90,10 @@ std::vector<std::string> frameConvertToAscii(const cv::Mat& frame) {
             unsigned int pixelValue{};
             pixelValue = frame.at<uchar>(static_cast<int>(rowCount), static_cast<int>(colCount));
             asciiFrame[rowCount].push_back( vta::palette[getPaletteIndex(pixelValue)] );
-            std::cout << asciiFrame[rowCount][colCount];
+            // std::cout << asciiFrame[rowCount][colCount];
         }
         // After filling the row, we go to the new line and filling the next row again
-        std::cout << '\n';
+        // std::cout << '\n';
     }
 
     return asciiFrame;
@@ -175,6 +179,7 @@ double autoSizeTerminal(const winsize& terminalSize, Video& userVideo) {
     // std::system("clear");
 }
 
+/*
 void autoResizeFrame(cv::Mat& videoFrame) {
     winsize terminal{};
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &terminal); // Get terminal size (rows and cols)
@@ -191,40 +196,60 @@ void autoResizeFrame(cv::Mat& videoFrame) {
 
     // cv::resize(videoFrame, videoFrame, cv::Size(), 1, 1 * vta::ASCII_VERTICAL_PROP);
 }
+*/
+
+double scalingFactor(const cv::Mat& videoFrame, const ftxui::Dimensions& screen) {
+    // std::cout << screen.dimx << ' ' << screen.dimy << '\n';
+    // std::cout << videoFrame.cols << ' ' << videoFrame.rows << '\n';
+
+    const auto termWidth  = static_cast<double>(screen.dimx);
+    const auto termHeight = static_cast<double>(screen.dimy);
+
+    const auto frameWidth  = static_cast<double>(videoFrame.cols);
+    const auto frameHeight = static_cast<double>(videoFrame.rows) * vta::ASCII_VERTICAL_PROP;
+
+    const double scaleX = termWidth / frameWidth;
+    const double scaleY = termHeight / frameHeight;
+
+    // std::cout << std::min(scaleX, scaleY) << '\n';
+
+    return std::min(scaleX, scaleY);
+}
 
 int main() {
-    // winsize terminal{};
+    using namespace ftxui;
+    using namespace std::chrono_literals;
+
     std::atexit(showCursor);
     std::signal(SIGINT, showCursor);
-    // ioctl(STDOUT_FILENO, TIOCGWINSZ, &terminal); // Get terminal size (rows and cols)
 
     Video userVideo{ /*getPath()*/ };
-
-    [[maybe_unused]] const double VIDEO_SCALE { /*autoSizeTerminal(terminal, userVideo)*/ };   // ...SCALE_0 - No scaling; SCALE_2 - reduce scale by 1/2; SCALE_4 - reduce scale by 1/4...
-    using namespace std::chrono_literals;
-    // std::cout << "VIDEO_SCALE : " << VIDEO_SCALE << '\n'
-            // << "terminal size row : " << terminal.ws_row << '\n'
-            // << "terminal size col : " << terminal.ws_col << '\n';
-
-    std::this_thread::sleep_for(1s);
-    // std::exit(0);
-
-    // Animation asciiAnimation{};
     cv::Mat videoFrame{};
-    userVideo.getVideo().read(videoFrame);
-    cv::resize(videoFrame, videoFrame, cv::Size(), 1, 1 * vta::ASCII_VERTICAL_PROP);
+
+    std::cout << "sleep for 1 sec... " << '\n';
+    std::this_thread::sleep_for( 1s );
     toggleCursor(OFF);
     ansiClearScreen();
 
     for (int frame{}; frame < static_cast<int>(userVideo.getFrameCount()); frame++) {
-        using namespace std::chrono_literals;
-        std::this_thread::sleep_for(userVideo.getFpsDelay());          // Timer representing rate between frames, or just FPS
+        auto dimensionalSize = Terminal::Size();
+        auto screen = Screen::Create(dimensionalSize, dimensionalSize);
+
+        std::this_thread::sleep_for( 16.66666ms );          // Timer representing rate between frames, or just FPS
         userVideo.getVideo().read(videoFrame);     // Reads 1st frame and place it to the testFrame
         cv::cvtColor(videoFrame, videoFrame, cv::COLOR_RGB2GRAY);
-        // cv::resize(videoFrame, videoFrame, cv::Size(), autoSizeTerminal(terminal, userVideo), autoSizeTerminal(terminal, userVideo) * vta::ASCII_VERTICAL_PROP);
-        autoResizeFrame(videoFrame);
-        frameConvertToAscii(videoFrame);
-        ansiMoveTopLeft();
+        cv::resize(videoFrame, videoFrame, cv::Size(), scalingFactor(videoFrame, dimensionalSize), scalingFactor(videoFrame, dimensionalSize) * vta::ASCII_VERTICAL_PROP);
+        std::vector<std::string> tempFrame { frameConvertToAscii(videoFrame) };
+
+        std::vector<Element> lines{};
+        for (const auto& line : tempFrame) {
+            lines.push_back(text(line));
+        }
+
+        Element asciiAnimCenter = center(vbox(std::move(lines)));
+        screen.Clear();
+        Render(screen, asciiAnimCenter);
+        screen.Print();
     }
 
     ansiClearScreen();
