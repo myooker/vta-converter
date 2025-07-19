@@ -1,8 +1,11 @@
 #include <iostream>
 #include <thread>
+#include <csignal>
+#include <sys/ioctl.h>
 #include <opencv4/opencv2/highgui.hpp>
 #include <opencv4/opencv2/imgproc.hpp>
 #include <opencv4/opencv2/videoio.hpp>
+#include <ncurses.h>
 
 #include "video.h"
 #include "animation.h"
@@ -17,14 +20,27 @@ namespace vta {
             "/home/myooker/Pictures/smart dude with glasses wallpaper.png",
             cv::IMREAD_REDUCED_GRAYSCALE_8)
     };
+
+    winsize terminal{};
+
     // As character taller than a pixel, we use this constant to decrease video's height
     constexpr double ASCII_VERTICAL_PROP = 0.5;
 
-    constexpr double REDUCE_SCALE_0 = 1;
+    constexpr double REDUCE_SCALE_0 = 1.0;
     constexpr double REDUCE_SCALE_2 = 0.5;
     constexpr double REDUCE_SCALE_4 = 0.25;
     constexpr double REDUCE_SCALE_8 = 0.125;
 }
+
+struct VideoPar {
+    double height{ 0.0 };
+    double width{ 0.0 };
+
+    void resize(const double REDUCE_SCALE) {
+        height *= REDUCE_SCALE;
+        width *= REDUCE_SCALE;
+    }
+};
 
 enum CursorToggle {
     OFF = 0,
@@ -95,31 +111,119 @@ void toggleCursor(const bool cursorState) {
     }
 }
 
-// This function needed for std::atexit() to make the program restore cursor state to ON
-// After the program exit, killing, terminates and etc...
+// This function is needed to restore cursor show state back at INTERCEPTION
+void showCursor(int signal) {
+    // ansiClearScreen();
+    std::cout << "\033[?25h" << std::flush; // Show cursor
+
+    std::exit(1);
+}
+// This function is needed to restore cursor show state back at std::atexit()
 void showCursor() {
+    // ansiClearScreen();
     std::cout << "\033[?25h" << std::flush; // Show cursor
 }
 
+bool isEnoughSpace(const winsize& terminalSize, VideoPar userVideo) {
+    if (terminalSize.ws_col > userVideo.width && terminalSize.ws_row > userVideo.height)
+        return true;
+    else
+        return false;
+}
+
+bool isEnoughSpace(const winsize& terminalSize, const cv::Mat& userVideo) {
+    if (terminalSize.ws_col > userVideo.cols && terminalSize.ws_row > userVideo.rows)
+        return true;
+    else
+        return false;
+}
+
+double autoSizeTerminal(const winsize& terminalSize, Video& userVideo) {
+    auto userVidHeight = userVideo.getVideo().get(cv::CAP_PROP_FRAME_HEIGHT);
+    auto userVidWidth = userVideo.getVideo().get(cv::CAP_PROP_FRAME_WIDTH);
+
+    VideoPar userVideoPar{userVidHeight * vta::ASCII_VERTICAL_PROP, userVidWidth};
+
+    // std::cout << "[BEFORE]\n" << "userVideoPar.height - " << userVideoPar.height
+    //         << " userVideoPar.width - " << userVideoPar.width << '\n';
+
+    double scale{ 1 };
+    // while (true) {
+    //     if (!isEnoughSpace(terminalSize, userVideoPar)) {
+    //         userVideoPar.resize(0.5);
+    //         scale *= 0.5;
+    //         // std::cout << "[SCALING] ON" << '\n';
+    //         continue;
+    //     } else {
+    //         break;
+    //     }
+    // }
+
+    if (!isEnoughSpace(terminalSize, userVideoPar)) {
+        userVideoPar.resize(0.5);
+        scale *= 0.5;
+        std::cout << "[SCALING] ON: " << scale << '\n';
+        return scale;
+    }
+
+    // std::cout << "[AFTER]\n" << "userVideoPar.height - " << userVideoPar.height
+    //     << " userVideoPar.width - " << userVideoPar.width << '\n';
+    //
+    // std::cout << "terminal size row : " << terminalSize.ws_row << '\n'
+    //     << "terminal size col : " << terminalSize.ws_col << '\n';
+
+    // std::system("clear");
+}
+
+void autoResizeFrame(cv::Mat& videoFrame) {
+    winsize terminal{};
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &terminal); // Get terminal size (rows and cols)
+
+    if (!isEnoughSpace(terminal, videoFrame)) {
+        while (true) {
+            double SCALE_SIZE{ 1.0 };
+            SCALE_SIZE *= 0.5;
+            std::cout << "RESIZING...\n" << SCALE_SIZE << '\n';
+        }
+        cv::resize(videoFrame, videoFrame, cv::Size(), SCALE_SIZE, SCALE_SIZE * vta::ASCII_VERTICAL_PROP);
+        // cv::resize(videoFrame, videoFrame, cv::Size(), vta::REDUCE_SCALE_8, vta::REDUCE_SCALE_8 * vta::ASCII_VERTICAL_PROP);
+    }
+
+    // cv::resize(videoFrame, videoFrame, cv::Size(), 1, 1 * vta::ASCII_VERTICAL_PROP);
+}
+
 int main() {
+    // winsize terminal{};
     std::atexit(showCursor);
+    std::signal(SIGINT, showCursor);
+    // ioctl(STDOUT_FILENO, TIOCGWINSZ, &terminal); // Get terminal size (rows and cols)
 
-    constexpr double VIDEO_SCALE { vta::REDUCE_SCALE_4 };   // ...SCALE_0 - No scaling; SCALE_2 - reduce scale by 1/2; SCALE_4 - reduce scale by 1/4...
     Video userVideo{ /*getPath()*/ };
-    // Animation asciiAnimation{};
-    cv::Mat testFrame{};
 
+    [[maybe_unused]] const double VIDEO_SCALE { /*autoSizeTerminal(terminal, userVideo)*/ };   // ...SCALE_0 - No scaling; SCALE_2 - reduce scale by 1/2; SCALE_4 - reduce scale by 1/4...
+    using namespace std::chrono_literals;
+    // std::cout << "VIDEO_SCALE : " << VIDEO_SCALE << '\n'
+            // << "terminal size row : " << terminal.ws_row << '\n'
+            // << "terminal size col : " << terminal.ws_col << '\n';
+
+    std::this_thread::sleep_for(1s);
+    // std::exit(0);
+
+    // Animation asciiAnimation{};
+    cv::Mat videoFrame{};
+    userVideo.getVideo().read(videoFrame);
+    cv::resize(videoFrame, videoFrame, cv::Size(), 1, 1 * vta::ASCII_VERTICAL_PROP);
     toggleCursor(OFF);
     ansiClearScreen();
 
-    for (double frame{}; frame < userVideo.getFrameCount(); frame++) {
+    for (int frame{}; frame < static_cast<int>(userVideo.getFrameCount()); frame++) {
         using namespace std::chrono_literals;
-        std::this_thread::sleep_for(16.67ms);          // Timer representing rate between frames, or just FPS
-        userVideo.getVideo().read(testFrame);     // Reads 1st frame and place it to the testFrame
-        cv::cvtColor(testFrame, testFrame, cv::COLOR_RGB2GRAY);
-        cv::resize(testFrame, testFrame, cv::Size(), VIDEO_SCALE, VIDEO_SCALE * vta::ASCII_VERTICAL_PROP);
-
-        frameConvertToAscii(testFrame);
+        std::this_thread::sleep_for(userVideo.getFpsDelay());          // Timer representing rate between frames, or just FPS
+        userVideo.getVideo().read(videoFrame);     // Reads 1st frame and place it to the testFrame
+        cv::cvtColor(videoFrame, videoFrame, cv::COLOR_RGB2GRAY);
+        // cv::resize(videoFrame, videoFrame, cv::Size(), autoSizeTerminal(terminal, userVideo), autoSizeTerminal(terminal, userVideo) * vta::ASCII_VERTICAL_PROP);
+        autoResizeFrame(videoFrame);
+        frameConvertToAscii(videoFrame);
         ansiMoveTopLeft();
     }
 
