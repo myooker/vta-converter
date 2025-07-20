@@ -7,44 +7,23 @@
 #include <opencv4/opencv2/videoio.hpp>
 
 #include <ftxui/screen/screen.hpp>
-#include <ftxui/screen/color.hpp>
 #include <ftxui/dom/elements.hpp>
 
 #include "video.h"
 #include "animation.h"
+#include "utils/debug_func.h"
 
 std::string getPath();
 
 namespace vta {
-    constexpr std::string_view palette{" .:-=+*#%@"}; // From lightest to darker
-    constexpr std::string_view dpalette{"@%#*+=-:. "};
-    // Hard-coded path to the picture.
-    cv::Mat frame{
-        cv::imread(
-            "/home/myooker/Pictures/smart dude with glasses wallpaper.png",
-            cv::IMREAD_REDUCED_GRAYSCALE_8)
-    };
+    constexpr std::string_view palette{" .:-=+*#%@"};       // From lightest to darker
+    constexpr std::string_view dpalette{"@%#*+=-:. "};      // From darker to lightes
 
-    winsize terminal{};
+    Video userVideo{ /*getPath()*/ };
 
     // As character taller than a pixel, we use this constant to decrease video's height
-    constexpr double ASCII_VERTICAL_PROP = 0.5;
-
-    constexpr double REDUCE_SCALE_0 = 1.0;
-    constexpr double REDUCE_SCALE_2 = 0.5;
-    constexpr double REDUCE_SCALE_4 = 0.25;
-    constexpr double REDUCE_SCALE_8 = 0.125;
+    constexpr double ASCII_VERTICAL_SCALE = 0.5;
 }
-
-struct VideoPar {
-    double height{ 0.0 };
-    double width{ 0.0 };
-
-    void resize(const double REDUCE_SCALE) {
-        height *= REDUCE_SCALE;
-        width *= REDUCE_SCALE;
-    }
-};
 
 enum CursorToggle {
     OFF = 0,
@@ -90,10 +69,7 @@ std::vector<std::string> frameConvertToAscii(const cv::Mat& frame) {
             unsigned int pixelValue{};
             pixelValue = frame.at<uchar>(static_cast<int>(rowCount), static_cast<int>(colCount));
             asciiFrame[rowCount].push_back( vta::palette[getPaletteIndex(pixelValue)] );
-            // std::cout << asciiFrame[rowCount][colCount];
         }
-        // After filling the row, we go to the new line and filling the next row again
-        // std::cout << '\n';
     }
 
     return asciiFrame;
@@ -117,145 +93,67 @@ void toggleCursor(const bool cursorState) {
 
 // This function is needed to restore cursor show state back at INTERCEPTION
 void showCursor(int signal) {
-    // ansiClearScreen();
+    ansiClearScreen();
     std::cout << "\033[?25h" << std::flush; // Show cursor
 
     std::exit(1);
 }
 // This function is needed to restore cursor show state back at std::atexit()
 void showCursor() {
-    // ansiClearScreen();
+    ansiClearScreen();
     std::cout << "\033[?25h" << std::flush; // Show cursor
 }
 
-bool isEnoughSpace(const winsize& terminalSize, VideoPar userVideo) {
-    if (terminalSize.ws_col > userVideo.width && terminalSize.ws_row > userVideo.height)
-        return true;
-    else
-        return false;
-}
-
-bool isEnoughSpace(const winsize& terminalSize, const cv::Mat& userVideo) {
-    if (terminalSize.ws_col > userVideo.cols && terminalSize.ws_row > userVideo.rows)
-        return true;
-    else
-        return false;
-}
-
-double autoSizeTerminal(const winsize& terminalSize, Video& userVideo) {
-    auto userVidHeight = userVideo.getVideo().get(cv::CAP_PROP_FRAME_HEIGHT);
-    auto userVidWidth = userVideo.getVideo().get(cv::CAP_PROP_FRAME_WIDTH);
-
-    VideoPar userVideoPar{userVidHeight * vta::ASCII_VERTICAL_PROP, userVidWidth};
-
-    // std::cout << "[BEFORE]\n" << "userVideoPar.height - " << userVideoPar.height
-    //         << " userVideoPar.width - " << userVideoPar.width << '\n';
-
-    double scale{ 1 };
-    // while (true) {
-    //     if (!isEnoughSpace(terminalSize, userVideoPar)) {
-    //         userVideoPar.resize(0.5);
-    //         scale *= 0.5;
-    //         // std::cout << "[SCALING] ON" << '\n';
-    //         continue;
-    //     } else {
-    //         break;
-    //     }
-    // }
-
-    if (!isEnoughSpace(terminalSize, userVideoPar)) {
-        userVideoPar.resize(0.5);
-        scale *= 0.5;
-        std::cout << "[SCALING] ON: " << scale << '\n';
-        return scale;
-    }
-
-    // std::cout << "[AFTER]\n" << "userVideoPar.height - " << userVideoPar.height
-    //     << " userVideoPar.width - " << userVideoPar.width << '\n';
-    //
-    // std::cout << "terminal size row : " << terminalSize.ws_row << '\n'
-    //     << "terminal size col : " << terminalSize.ws_col << '\n';
-
-    // std::system("clear");
-}
-
-/*
-void autoResizeFrame(cv::Mat& videoFrame) {
-    winsize terminal{};
-    ioctl(STDOUT_FILENO, TIOCGWINSZ, &terminal); // Get terminal size (rows and cols)
-
-    if (!isEnoughSpace(terminal, videoFrame)) {
-        while (true) {
-            double SCALE_SIZE{ 1.0 };
-            SCALE_SIZE *= 0.5;
-            std::cout << "RESIZING...\n" << SCALE_SIZE << '\n';
-        }
-        cv::resize(videoFrame, videoFrame, cv::Size(), SCALE_SIZE, SCALE_SIZE * vta::ASCII_VERTICAL_PROP);
-        // cv::resize(videoFrame, videoFrame, cv::Size(), vta::REDUCE_SCALE_8, vta::REDUCE_SCALE_8 * vta::ASCII_VERTICAL_PROP);
-    }
-
-    // cv::resize(videoFrame, videoFrame, cv::Size(), 1, 1 * vta::ASCII_VERTICAL_PROP);
-}
-*/
-
 double scalingFactor(const cv::Mat& videoFrame, const ftxui::Dimensions& screen) {
-    // std::cout << screen.dimx << ' ' << screen.dimy << '\n';
-    // std::cout << videoFrame.cols << ' ' << videoFrame.rows << '\n';
-
     const auto termWidth  = static_cast<double>(screen.dimx);
     const auto termHeight = static_cast<double>(screen.dimy);
 
     const auto frameWidth  = static_cast<double>(videoFrame.cols);
-    const auto frameHeight = static_cast<double>(videoFrame.rows) * vta::ASCII_VERTICAL_PROP;
+    const auto frameHeight = static_cast<double>(videoFrame.rows) * vta::ASCII_VERTICAL_SCALE;
 
     const double scaleX = termWidth / frameWidth;
     const double scaleY = termHeight / frameHeight;
 
-    // std::cout << std::min(scaleX, scaleY) << '\n';
-
     return std::min(scaleX, scaleY);
 }
 
-int main() {
+int main(int argc, char** argv) {
     using namespace ftxui;
     using namespace std::chrono_literals;
 
     std::atexit(showCursor);
     std::signal(SIGINT, showCursor);
-
-    Video userVideo{ /*getPath()*/ };
     cv::Mat videoFrame{};
 
-    std::cout << "sleep for 1 sec... " << '\n';
-    std::this_thread::sleep_for( 1s );
     toggleCursor(OFF);
     ansiClearScreen();
 
-    for (int frame{}; frame < static_cast<int>(userVideo.getFrameCount()); frame++) {
-        auto dimensionalSize = Terminal::Size();
-        auto screen = Screen::Create(dimensionalSize, dimensionalSize);
+    for (int frame{}; frame < static_cast<int>(vta::userVideo.getFrameCount()); frame++) {
+        auto screen { Screen::Create(Terminal::Size()) };                       // Create a screen with size of current terminal
+        vta::userVideo.getVideo().read(videoFrame);                                         // Reads 1st frame and place it to the testFrame
+        const auto terminalSize { Terminal::Size() };
+        const double scale { scalingFactor(videoFrame, terminalSize) };                  // Calculate scale for the frame
 
-        std::this_thread::sleep_for( 16.66666ms );          // Timer representing rate between frames, or just FPS
-        userVideo.getVideo().read(videoFrame);     // Reads 1st frame and place it to the testFrame
-        cv::cvtColor(videoFrame, videoFrame, cv::COLOR_RGB2GRAY);
-        cv::resize(videoFrame, videoFrame, cv::Size(), scalingFactor(videoFrame, dimensionalSize), scalingFactor(videoFrame, dimensionalSize) * vta::ASCII_VERTICAL_PROP);
-        std::vector<std::string> tempFrame { frameConvertToAscii(videoFrame) };
+        // Timer representing rate between frames, or just FPS
+        std::this_thread::sleep_for(std::chrono::duration<double>(vta::userVideo.getFpsDelay() / 2));
+        cv::cvtColor(videoFrame, videoFrame, cv::COLOR_RGB2GRAY);               // Convert colors to GRAY
+        cv::resize(videoFrame, videoFrame, cv::Size(), scale, scale * vta::ASCII_VERTICAL_SCALE);
 
-        std::vector<Element> lines{};
-        for (const auto& line : tempFrame) {
-            lines.push_back(text(line));
+        std::vector<Element> terminalFrame{};
+
+        for (const auto& frameLine : frameConvertToAscii(videoFrame)) {
+            terminalFrame.push_back(center(text(frameLine)));
         }
 
-        Element asciiAnimCenter = center(vbox(std::move(lines)));
-        screen.Clear();
-        Render(screen, asciiAnimCenter);
+        Element frameT { center(vbox(terminalFrame))};
+        Render(screen, frameT);
+        ansiClearScreen();
         screen.Print();
     }
 
     ansiClearScreen();
-    toggleCursor(ON);
-    std::cout << "FPS: " << userVideo.getFps() << '\n';
-    std::cout << "Frame Count: " << userVideo.getFrameCount() << std::endl;
+    std::cout << "FPS: " << vta::userVideo.getFps() << '\n';
+    std::cout << "Frame Count: " << vta::userVideo.getFrameCount() << std::endl;
 
     return 0;
 }

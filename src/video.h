@@ -6,7 +6,7 @@
 
 class Video {
 private:
-    cv::VideoCapture m_video{"/home/myooker/bluezenith.mp4"};
+    cv::VideoCapture m_video{"/home/myooker/badapple2k60f.mp4"};
     double m_frameCount{ 333 };
     double m_fps{ 33.3 };
     const std::chrono::duration<double> m_fpsDelay{ 1.0 / m_video.get(cv::CAP_PROP_FPS)};

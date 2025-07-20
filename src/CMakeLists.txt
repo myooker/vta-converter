@@ -19,7 +19,8 @@ add_executable(vidtoascii
         animation.h
         video.cpp
         video.h
-        ../debug_func.cpp
+        utils/debug_func.cpp
+        utils/debug_func.h
 )
 
 target_link_libraries(vidtoascii
