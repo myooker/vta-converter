@@ -23,6 +23,10 @@ add_executable(vidtoascii
         utils/debug_func.h
         utils/ansicode.cpp
         utils/ansicode.h
+        engine/scaling.cpp
+        engine/scaling.h
+        engine/constants.h
+        engine/constants.cpp
 )
 
 target_link_libraries(vidtoascii

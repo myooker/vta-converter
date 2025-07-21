@@ -18,14 +18,12 @@ namespace ansi {
     }
 
     void showCursor(int signal) {
-        clearScreen();
         std::cout << "\033[?25h" << std::flush; // Show cursor
 
         std::exit(1);
     }
 
     void showCursor() {
-        clearScreen();
         std::cout << "\033[?25h" << std::flush; // Show cursor
     }
 }

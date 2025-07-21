@@ -1,38 +1,30 @@
+// C++ STD library
 #include <iostream>
 #include <thread>
 #include <csignal>
-#include <opencv4/opencv2/highgui.hpp>
+#include <cstdlib>
+
+// OpenCV library
 #include <opencv4/opencv2/imgproc.hpp>
 #include <opencv4/opencv2/videoio.hpp>
 
+// ftxui library
 #include <ftxui/screen/screen.hpp>
 #include <ftxui/dom/elements.hpp>
 
+// My shit
 #include "video.h"
 #include "animation.h"
+#include "engine/constants.h"
+#include "engine/scaling.h"
 #include "utils/ansicode.h"
 #include "utils/debug_func.h"
 
 std::string getPath();
 
-namespace vta {
-    constexpr std::string_view palette{" .:-=+*#%@"};       // From lightest to darker
-    constexpr std::string_view dpalette{"@%#*+=-:. "};      // From darker to lightes
-
-    Video userVideo{ /*getPath()*/ };
-
-    // As character taller than a pixel, we use this constant to decrease video's height
-    constexpr double ASCII_VERTICAL_SCALE = 0.5;
-}
-
-
 enum CursorToggle {
     OFF = 0,
     ON = 1,
-};
-
-enum Constants {
-    MAX_GRAY_VALUE = 255,
 };
 
 std::string getPath() {
@@ -40,92 +32,64 @@ std::string getPath() {
     std::cout << "Please enter full path to a video\n> ";
     std::getline(std::cin, path);
 
-    return path;
-}
-
-std::size_t getPaletteIndex(const unsigned int pixelColor) {
-    return (pixelColor * (vta::palette.size()-1) / MAX_GRAY_VALUE);
-}
-
-std::vector<std::string> frameConvertToAscii(const cv::Mat& frame) {
-    if (frame.empty()) {
-        std::cerr << "Error! No image detected!\nExiting the program..." << std::endl;
+    if (!path.starts_with('/')) {
+        std::cerr << "Invalid path! Please try again!\n";
         std::exit(1);
     }
 
-    const std::size_t frameRowSize{ static_cast<std::size_t>( frame.rows )};    // Get frame's row f(x) size
-    const std::size_t frameColSize{ static_cast<std::size_t>( frame.cols )};    // Get frame's column f(y) size
-    std::vector<std::string> asciiFrame{}; /*
-        ^           ^
-    Represents  Frame's row
-      frame
-*/
-    asciiFrame.resize(frameRowSize);    // Resizing std::string's in vector to frame's row f(x) size, without it the program crashes
-
-    // At first, we're starting with a row
-    for (std::size_t rowCount{}; rowCount < frameRowSize; rowCount++) {
-
-        // Then, we're filling our row with columns, f(y) and print it to the terminal
-        for (std::size_t colCount{}; colCount < frameColSize; colCount++) {
-            unsigned int pixelValue{};
-            pixelValue = frame.at<uchar>(static_cast<int>(rowCount), static_cast<int>(colCount));
-            asciiFrame[rowCount].push_back( vta::palette[getPaletteIndex(pixelValue)] );
-        }
+    if (path.starts_with('~')) {
+        path.replace(0, 1, std::getenv("HOME"));
     }
 
-    return asciiFrame;
-}
-
-double scalingFactor(const cv::Mat& videoFrame, const ftxui::Dimensions& screen) {
-    const auto termWidth  = static_cast<double>(screen.dimx);
-    const auto termHeight = static_cast<double>(screen.dimy);
-
-    const auto frameWidth  = static_cast<double>(videoFrame.cols);
-    const auto frameHeight = static_cast<double>(videoFrame.rows) * vta::ASCII_VERTICAL_SCALE;
-
-    const double scaleX = termWidth / frameWidth;
-    const double scaleY = termHeight / frameHeight;
-
-    return std::min(scaleX, scaleY);
+    return path;
 }
 
 int main(int argc, char** argv) {
     using namespace ftxui;
     using namespace std::chrono_literals;
 
+    bool beVerbose{ false };
+
     std::atexit(ansi::showCursor);
     std::signal(SIGINT, ansi::showCursor);
+    std::string tempPath{};
+
+    for (int i{}; i < argc; i++) {
+        if (std::string(argv[i]) == "-v") {
+            beVerbose = true;
+            continue;
+        }
+        if (std::string(argv[i]) == "-f" && argc > 2) { // It's shit and will brake
+            tempPath = argv[static_cast<std::size_t>(i+1)];
+            continue;
+        }
+    }
+
+    if (tempPath.empty()) {
+        std::cerr << "Please enter video's path! For example:\n"
+                << "1) /home/myooker/video.mp4\n"
+                << "2) ~/video.mp4\n"
+                << "Exiting the program..." << std::endl;
+        std::exit(1);
+    }
+
+    Video userVideo{tempPath};
     cv::Mat videoFrame{};
+
+    if (beVerbose) {
+        DEBUG::VIDEO::printFpsDelay(userVideo);
+        DEBUG::VIDEO::printFrameCount(userVideo);
+        DEBUG::VIDEO::printFrameRate(userVideo);
+
+        std::this_thread::sleep_for(5s);
+    }
 
     ansi::toggleCursor(OFF);
     ansi::clearScreen();
 
-    for (int frame{}; frame < static_cast<int>(vta::userVideo.getFrameCount()); frame++) {
-        auto screen { Screen::Create(Terminal::Size()) };                       // Create a screen with size of current terminal
-        vta::userVideo.getVideo().read(videoFrame);                                         // Reads 1st frame and place it to the testFrame
-        const auto terminalSize { Terminal::Size() };
-        const double scale { scalingFactor(videoFrame, terminalSize) };                  // Calculate scale for the frame
-
-        // Timer representing rate between frames, or just FPS
-        std::this_thread::sleep_for(std::chrono::duration<double>(vta::userVideo.getFpsDelay() / 2));
-        cv::cvtColor(videoFrame, videoFrame, cv::COLOR_RGB2GRAY);               // Convert colors to GRAY
-        cv::resize(videoFrame, videoFrame, cv::Size(), scale, scale * vta::ASCII_VERTICAL_SCALE);
-
-        std::vector<Element> terminalFrame{};
-
-        for (const auto& frameLine : frameConvertToAscii(videoFrame)) {
-            terminalFrame.push_back(center(text(frameLine)));
-        }
-
-        Element frameT { center(vbox(terminalFrame))};
-        Render(screen, frameT);
-        ansi::clearScreen();
-        screen.Print();
-    }
+    userVideo.playAscii(videoFrame);
 
     ansi::clearScreen();
-    std::cout << "FPS: " << vta::userVideo.getFps() << '\n';
-    std::cout << "Frame Count: " << vta::userVideo.getFrameCount() << std::endl;
 
     return 0;
 }
