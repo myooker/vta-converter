@@ -1,7 +1,6 @@
 #include <iostream>
 #include <thread>
 #include <csignal>
-#include <sys/ioctl.h>
 #include <opencv4/opencv2/highgui.hpp>
 #include <opencv4/opencv2/imgproc.hpp>
 #include <opencv4/opencv2/videoio.hpp>
@@ -11,6 +10,7 @@
 
 #include "video.h"
 #include "animation.h"
+#include "utils/ansicode.h"
 #include "utils/debug_func.h"
 
 std::string getPath();
@@ -24,6 +24,7 @@ namespace vta {
     // As character taller than a pixel, we use this constant to decrease video's height
     constexpr double ASCII_VERTICAL_SCALE = 0.5;
 }
+
 
 enum CursorToggle {
     OFF = 0,
@@ -75,35 +76,6 @@ std::vector<std::string> frameConvertToAscii(const cv::Mat& frame) {
     return asciiFrame;
 }
 
-void ansiClearScreen() {
-    std::cout << "\033[2J\033[H"; // Cleans terminal
-}
-
-void ansiMoveTopLeft() {
-    std::cout << "\033[H"; // Moves terminal cursor to the top-left corner
-}
-
-void toggleCursor(const bool cursorState) {
-    if (cursorState) {
-        std::cout << "\033[?25h"; // Show cursor
-    } else {
-        std::cout << "\033[?25l"; // Hide cursor
-    }
-}
-
-// This function is needed to restore cursor show state back at INTERCEPTION
-void showCursor(int signal) {
-    ansiClearScreen();
-    std::cout << "\033[?25h" << std::flush; // Show cursor
-
-    std::exit(1);
-}
-// This function is needed to restore cursor show state back at std::atexit()
-void showCursor() {
-    ansiClearScreen();
-    std::cout << "\033[?25h" << std::flush; // Show cursor
-}
-
 double scalingFactor(const cv::Mat& videoFrame, const ftxui::Dimensions& screen) {
     const auto termWidth  = static_cast<double>(screen.dimx);
     const auto termHeight = static_cast<double>(screen.dimy);
@@ -121,12 +93,12 @@ int main(int argc, char** argv) {
     using namespace ftxui;
     using namespace std::chrono_literals;
 
-    std::atexit(showCursor);
-    std::signal(SIGINT, showCursor);
+    std::atexit(ansi::showCursor);
+    std::signal(SIGINT, ansi::showCursor);
     cv::Mat videoFrame{};
 
-    toggleCursor(OFF);
-    ansiClearScreen();
+    ansi::toggleCursor(OFF);
+    ansi::clearScreen();
 
     for (int frame{}; frame < static_cast<int>(vta::userVideo.getFrameCount()); frame++) {
         auto screen { Screen::Create(Terminal::Size()) };                       // Create a screen with size of current terminal
@@ -147,11 +119,11 @@ int main(int argc, char** argv) {
 
         Element frameT { center(vbox(terminalFrame))};
         Render(screen, frameT);
-        ansiClearScreen();
+        ansi::clearScreen();
         screen.Print();
     }
 
-    ansiClearScreen();
+    ansi::clearScreen();
     std::cout << "FPS: " << vta::userVideo.getFps() << '\n';
     std::cout << "Frame Count: " << vta::userVideo.getFrameCount() << std::endl;
 
