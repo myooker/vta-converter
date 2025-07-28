@@ -102,11 +102,12 @@ int main(int argc, char** argv) {
         }
 
         if (std::string tempArg{argv[x]}; tempArg.starts_with('-')) {
-            if (tempArg.find('v')) {
+            if (tempArg.substr(1) == "v") {
+                std::cout << "tempArg: " << tempArg << '\n';
                 currentSettings.isVerbose = true;
             }
 
-            if (tempArg.find('f')) {
+            if (tempArg.substr(1) == "f") {
                 if (!isCorrectPath(argv[x+1])) {
                     invalidFilePathMsg();
                     return 1;
@@ -115,13 +116,10 @@ int main(int argc, char** argv) {
                 break;
             }
 
-            if (tempArg.find('h') && argc < 3) {
+            if ((tempArg.substr(1) == "h") && argc < 3) {
                 //printhelp();
                 std::cout << "HELP!\n";
                 return 0;
-            } else {
-                std::cerr << "Use '--help' or '-h' alone to display usage information.\n";
-                return 1;
             }
         }
     }
