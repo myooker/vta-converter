@@ -74,6 +74,11 @@ int main(int argc, char** argv) {
 
     std::cout << argc << '\n';
 
+    // TODO:
+    // -[ ] Remake CLI arguments (for example: ./vta play --file ~/file/path, or ./vta help play, ./vta -v play
+    //
+
+
     for (std::size_t x{ 1 }; x < argc; ++x) {
         std::cout << x << ") argv: " << argv[x] << '\n';
 
@@ -129,7 +134,7 @@ int main(int argc, char** argv) {
                 << "filePath: " << currentSettings.videoPath << '\n';
 
 
-    return 0;
+    // return 0;
 
     // for (int i{ 1 }; i < argc; i++) {
     //     if (std::string(argv[i]) == "-v") {
@@ -146,7 +151,7 @@ int main(int argc, char** argv) {
     //         return 0;
     //     }
     // }
-
+    //
     // if (videoPath.empty()) {
     //     std::cerr << "Please enter video's path! For example:\n"
     //             << "1) /home/myooker/video.mp4\n"
