@@ -17,6 +17,6 @@ WIP
 For example: `./vidtoascii -f ~/badapple2k60f.mp4`
 
 # TODO
--[] Pre-cache ASCII frames
+-[ ] Pre-cache ASCII frames
 
 ## License

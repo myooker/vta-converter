@@ -13,31 +13,28 @@
 #include <ftxui/dom/elements.hpp>
 
 // My shit
+#include <filesystem>
+
 #include "video.h"
 #include "utils/ansicode.h"
 #include "utils/debug_func.h"
+
+namespace Program{
+    constexpr std::string_view commandPlay{"play"};
+    constexpr std::string_view commandHelp{"help"};
+
+    enum FILE_ERROR {
+        NEGRO_ERROR,
+        NOT_EXIST,
+        WRONG_FORM,
+        WRONG_PATH,
+    };
+}
 
 enum CursorToggle {
     OFF = 0,
     ON = 1,
 };
-
-std::string getPath() {
-    std::string path{};
-    std::cout << "Please enter full path to a video\n> ";
-    std::getline(std::cin, path);
-
-    if (!path.starts_with('/')) {
-        std::cerr << "Invalid path! Please try again!\n";
-        std::exit(1);
-    }
-
-    if (path.starts_with('~')) {
-        path.replace(0, 1, std::getenv("HOME"));
-    }
-
-    return path;
-}
 
 struct ProgramSettings {
     std::string videoPath{"None"};
@@ -46,86 +43,101 @@ struct ProgramSettings {
 
 };
 
-bool isCorrectPath(const std::string& path) {
+bool isCorrectPath(const std::string_view& path, Program::FILE_ERROR &errorType) {
+    int c{};
+
     if (path.starts_with('/') || path.starts_with("~/")) {
-        return true;
+        c += 1;
     } else {
+        errorType = Program::WRONG_PATH;
         return false;
+    }
+
+    if (path.ends_with(".mp4")) {
+        c += 1;
+    } else {
+        errorType = Program::WRONG_FORM;
+        return false;
+    }
+
+    if (std::filesystem::exists(path)) {
+        c += 1;
+    } else {
+        errorType = Program::NOT_EXIST;
+        return false;
+    }
+
+    if (c > 2)
+        return true;
+    else
+        return false;
+}
+
+void invalidFile(const Program::FILE_ERROR ERROR_TYPE) {
+    switch (ERROR_TYPE) {
+        case Program::WRONG_PATH:
+            std::cout << "error: invalid file path\n\n"
+            << "Make sure to:\n"
+            << "- Use absolute path to an existing file\n"
+            << "- Avoid using unsupported character or symbols\n\n"
+            << "Example:\n"
+            << "\t/home/username/video/sample.mp4\n"
+            << "\t~/video/sample.mp4" << std::endl;
+            return;
+        case Program::NOT_EXIST:
+            std::cout << "error: the file does not exist\n\n"
+            << "Make sure to:\n"
+            << "- Use absolute path to an existing file\n"
+            << "- Avoid using unsupported character or symbols\n\n"
+            << "Example:\n"
+            << "\t/home/username/video/sample.mp4\n"
+            << "\t~/video/sample.mp4" << std::endl;
+            return;
+        case Program::WRONG_FORM:
+            std::cout << "error: incorrect video format\n\n"
+            << "Make sure to:\n"
+            << "- Use absolute path to an existing file\n"
+            << "- Avoid using unsupported character or symbols\n\n"
+            << "Example:\n"
+            << "\t/home/username/video/sample.mp4\n"
+            << "\t~/video/sample.mp4" << std::endl;
+            return;
+        default: ;
     }
 }
 
-void invalidFilePathMsg() {
-    std::cout << "error: invalid file path\n\n"
-        << "Make sure to:\n"
-        << "- Use absolute path to an existing file\n"
-        << "- Avoid using unsupported character or symbols\n\n"
-        << "Example:\n"
-        << "\t/home/username/video/sample.mp4\n"
-        << "\t~/video/sample.mp4" << std::endl;
-}
 
-int main(int argc, char** argv) {
+
+int main(const int argc, const char **argv) {
+    std::atexit(ansi::showCursor);
+    std::signal(SIGINT, ansi::showCursor);
+
     using namespace ftxui;
     using namespace std::chrono_literals;
     ProgramSettings currentSettings{};
 
-    std::atexit(ansi::showCursor);
-    std::signal(SIGINT, ansi::showCursor);
 
-    std::cout << argc << '\n';
+    for (int i{ 1 }; i < argc; i++) {
+        if (std::string_view{ argv[i] } == Program::commandPlay && argc > 3) {
 
-    // TODO:
-    // -[ ] Remake CLI arguments (for example: ./vta play --file ~/file/path, or ./vta help play, ./vta -v play
-    //
-
-
-    for (std::size_t x{ 1 }; x < argc; ++x) {
-        std::cout << x << ") argv: " << argv[x] << '\n';
-
-        if (std::string tempArg{argv[x]}; tempArg.starts_with("--")) {
-            if (tempArg.substr(2) == "verbose") {
-                currentSettings.isVerbose = true;
-            }
-
-            if (tempArg.substr(2) == "file") {
-                if (!isCorrectPath(argv[x+1])) {
-                    invalidFilePathMsg();
+            if (const std::string_view fileArg{argv[i+1]}; fileArg == "-f" || fileArg == "--file") {
+                if (Program::FILE_ERROR ERROR_TYPE{}; isCorrectPath(std::string_view{argv[i+2]}, ERROR_TYPE)) {
+                    currentSettings.videoPath = argv[i+2];
+                } else {
+                    invalidFile(ERROR_TYPE);
                     return 1;
                 }
-                currentSettings.videoPath = argv[x+1];
-                break;
-            }
-
-            if (tempArg.substr(2) == "help" && argc < 3) {
-                //printhelp();
-                std::cout << "HELP!\n";
-                return 0;
             } else {
-                std::cerr << "Use '--help' or '-h' alone to display usage information.\n";
-                return 1;
+
+            }
+            if (const std::string_view cacheArg{argv[i+1]}; cacheArg == "-c" || cacheArg == "--cache") {
+
             }
         }
 
-        if (std::string tempArg{argv[x]}; tempArg.starts_with('-')) {
-            if (tempArg.substr(1) == "v") {
-                std::cout << "tempArg: " << tempArg << '\n';
-                currentSettings.isVerbose = true;
-            }
-
-            if (tempArg.substr(1) == "f") {
-                if (!isCorrectPath(argv[x+1])) {
-                    invalidFilePathMsg();
-                    return 1;
-                }
-                currentSettings.videoPath = argv[x+1];
-                break;
-            }
-
-            if ((tempArg.substr(1) == "h") && argc < 3) {
-                //printhelp();
-                std::cout << "HELP!\n";
-                return 0;
-            }
+        if (std::string_view {argv[i]} == Program::commandHelp) {
+            //printHelp();
+            return 0;
         }
     }
 
@@ -133,45 +145,8 @@ int main(int argc, char** argv) {
                 << "isHelp: " << currentSettings.isHelp << '\n'
                 << "filePath: " << currentSettings.videoPath << '\n';
 
-
-    // return 0;
-
-    // for (int i{ 1 }; i < argc; i++) {
-    //     if (std::string(argv[i]) == "-v") {
-    //         beVerbose = true;
-    //         continue;
-    //     }
-    //     if (std::string(argv[i]) == "-f" && argv[i+1]) { // It's shit and will brake
-    //         videoPath = argv[static_cast<std::size_t>(i+1)];
-    //         continue;
-    //     }
-    //
-    //     if (std::string(argv[i]) == "-h") {
-    //         std::cout << "Help Information:\n";
-    //         return 0;
-    //     }
-    // }
-    //
-    // if (videoPath.empty()) {
-    //     std::cerr << "Please enter video's path! For example:\n"
-    //             << "1) /home/myooker/video.mp4\n"
-    //             << "2) ~/video.mp4\n"
-    //             << "Exiting the program..." << std::endl;
-    //     return 1;
-    // }
-
     Video userVideo{ currentSettings.videoPath };
     cv::Mat videoFrame{};
-
-    // if (beVerbose) {
-    //     DEBUG::APP::printFilePath(videoPath);
-    //     DEBUG::VIDEO::printRepeat(false);
-    //     DEBUG::VIDEO::printFpsDelay(userVideo);
-    //     DEBUG::VIDEO::printFrameCount(userVideo);
-    //     DEBUG::VIDEO::printFrameRate(userVideo);
-    //     DEBUG::APP::printSleepTime();
-    //     std::this_thread::sleep_for(5s);
-    // }
 
     ansi::toggleCursor(OFF);
     ansi::clearScreen();
