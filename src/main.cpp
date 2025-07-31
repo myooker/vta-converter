@@ -149,30 +149,6 @@ int main(const int argc, const char **argv) {
     ProgramSettings currentSettings{};
     playCommand(argv, currentSettings);
     
-    // for (int i{ 1 }; i < argc; i++) {
-    //     if (std::string_view{ argv[i] } == Program::commandPlay && argc > 3) {
-    //
-    //         if (const std::string_view fileArg{argv[i+1]}; fileArg == "-f" || fileArg == "--file") {
-    //             if (Program::FILE_ERROR ERROR_TYPE{}; isCorrectPath(std::string_view{argv[i+2]}, ERROR_TYPE)) {
-    //                 currentSettings.videoPath = argv[i+2];
-    //             } else {
-    //                 invalidFile(ERROR_TYPE);
-    //                 return 1;
-    //             }
-    //         } else {
-    //
-    //         }
-    //         if (const std::string_view cacheArg{argv[i+1]}; cacheArg == "-c" || cacheArg == "--cache") {
-    //
-    //         }
-    //     }
-    //
-    //     if (std::string_view {argv[i]} == Program::commandHelp) {
-    //         //printHelp();
-    //         return 0;
-    //     }
-    // }
-
     std::cout << "isVerbose: " << currentSettings.isVerbose << '\n'
                 << "isHelp: " << currentSettings.isHelp << '\n'
                 << "filePath: " << currentSettings.videoPath << '\n';
