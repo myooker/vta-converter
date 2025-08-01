@@ -1,23 +1,18 @@
-// C++ STD library
 #include <iostream>
 #include <thread>
 #include <csignal>
 #include <cstdlib>
 
-// OpenCV library
 #include <opencv4/opencv2/imgproc.hpp>
 #include <opencv4/opencv2/videoio.hpp>
 
-// ftxui library
 #include <ftxui/screen/screen.hpp>
 #include <ftxui/dom/elements.hpp>
 
-// My shit
 #include <filesystem>
 
 #include "video.h"
 #include "utils/ansicode.h"
-#include "utils/debug_func.h"
 
 namespace Program{
     constexpr std::string_view commandPlay{"play"};
@@ -35,7 +30,9 @@ namespace Program{
     };
 
     enum ARG_INDEX {
-        OPTION = 2,
+        PROGRAM = 0,
+        COMMAND = 1,
+        PARAMETER = 2,
         PATH = 3,
 
     };
@@ -53,36 +50,25 @@ struct ProgramSettings {
 };
 
 bool isCorrectPath(const std::string_view& path, Program::FILE_ERROR &errorType) {
-    int c{};
-
-    if (path.starts_with('/') || path.starts_with("~/")) {
-        c += 1;
-    } else {
+    if (!path.starts_with('/') || path.starts_with("~/")) {
         errorType = Program::WRONG_PATH;
         return false;
     }
 
-    if (path.ends_with(".mp4")) {
-        c += 1;
-    } else {
+    if (!path.ends_with(".mp4")) {  // Add support for other formats that OpenCV supports
         errorType = Program::WRONG_FORM;
         return false;
     }
 
-    if (std::filesystem::exists(path)) {
-        c += 1;
-    } else {
+    if (!std::filesystem::exists(path)) {
         errorType = Program::NOT_EXIST;
         return false;
     }
 
-    if (c > 2)
-        return true;
-    else
-        return false;
+    return true;
 }
 
-void invalidFile(const Program::FILE_ERROR ERROR_TYPE) {
+void printError(const Program::FILE_ERROR ERROR_TYPE) {
     using namespace Program;
     switch (ERROR_TYPE) {
         case WRONG_FORM:
@@ -101,7 +87,7 @@ void invalidFile(const Program::FILE_ERROR ERROR_TYPE) {
         case NO_OPTION:
             std::cout << "error: missing required option\n"
                      << "hint: expected --file <PATH> or --cache <PATH> after the command\n\n";
-        default: ;
+        default:;
     }
 
     std::cout << "Make sure to:\n"
@@ -116,28 +102,32 @@ void invalidFile(const Program::FILE_ERROR ERROR_TYPE) {
 
 void playCommand(const char **argv, ProgramSettings &currentSettings) {
     using namespace Program;
-    if (argv[OPTION] == nullptr) {
-        invalidFile(NO_OPTION);
-        return;
+
+    if (argv[PARAMETER] == nullptr) {
+        printError(NO_OPTION);
+    }
+    const std::string_view parameter{ argv[PARAMETER] };
+
+    if (parameter == "help") {
+        printError(NEGRO_ERROR);
     }
 
     if (argv[PATH] == nullptr) {
-        invalidFile(NO_PATH);
-        return;
+        printError(NO_PATH);
     }
+    const std::string_view path{ argv[PATH] };
 
-    FILE_ERROR ERROR_TYPE{};
-
-    const std::string_view argument{ argv[2] };
-    const std::string_view path{ argv[3] };
-
-    if (argument == "--file" || argument == "-f") {
-        if (isCorrectPath(path, ERROR_TYPE)) {
+    if (parameter == "--file" || parameter == "-f") {
+        if (FILE_ERROR ERROR_TYPE{}; isCorrectPath(path, ERROR_TYPE)) {
             currentSettings.videoPath = path;
         } else {
-            invalidFile(ERROR_TYPE);
+            printError(ERROR_TYPE);
         }
     }
+}
+
+void helpCommand(const char **argv) {
+
 }
 
 int main(const int argc, const char **argv) {
@@ -146,8 +136,22 @@ int main(const int argc, const char **argv) {
 
     using namespace ftxui;
     using namespace std::chrono_literals;
+    using namespace Program;
     ProgramSettings currentSettings{};
-    playCommand(argv, currentSettings);
+
+    for (std::size_t i{ 0 }; i < argc; i++) {
+        if (argv[COMMAND] == nullptr) {
+            helpCommand(argv);
+            std::exit(1);
+        }
+
+        if (const std::string_view temp{ argv[i] }; temp == "play")
+            playCommand(argv, currentSettings);
+
+        if (const std::string_view temp{ argv[i]}; temp == "help")
+            helpCommand(argv);
+    }
+
     
     std::cout << "isVerbose: " << currentSettings.isVerbose << '\n'
                 << "isHelp: " << currentSettings.isHelp << '\n'
