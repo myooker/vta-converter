@@ -27,6 +27,8 @@ add_executable(vidtoascii
         engine/scaling.h
         engine/constants.h
         engine/constants.cpp
+        engine/rle.cpp
+        engine/rle.h
 )
 
 target_link_libraries(vidtoascii

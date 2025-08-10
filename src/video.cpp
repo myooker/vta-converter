@@ -1,4 +1,5 @@
 #include "video.h"
+#include "engine/rle.h"
 
 #include <thread>
 #include <opencv2/imgproc.hpp>
@@ -9,6 +10,11 @@
 #include "engine/constants.h"
 #include "engine/scaling.h"
 #include "ftxui/dom/elements.hpp"
+
+#include <iostream>
+#include <fstream>
+
+
 
 std::vector<std::string> Video::frameToAscii(cv::Mat& videoFrame) {
     const std::size_t frameRowSize{ static_cast<std::size_t>( videoFrame.rows )};    // Get frame's row f(x) size
@@ -40,8 +46,8 @@ void Video::playAscii(cv::Mat& videoFrame) {
     using AsciiFrame = std::vector<std::string>;
 
     for (int frame{}; frame < static_cast<int>(getFrameCount()); frame++) {
-        auto frameStart {steady_clock::now()};
-        auto screen {Screen::Create(Terminal::Size()) };   // Create a screen with size of current terminal
+        auto frameStart { steady_clock::now() };
+        auto screen { Screen::Create(Terminal::Size()) };   // Create a screen with size of current terminal
         m_video.read(videoFrame);                   // Reads 1st frame and place it to the testFrame
         const auto terminalSize { Terminal::Size() };
         const double scale { scalingFactor(videoFrame, terminalSize) }; // Calculate scale for the frame
@@ -66,4 +72,61 @@ void Video::playAscii(cv::Mat& videoFrame) {
         // ansi::clearScreen();    // Clear terminal screen
         screen.Print(); // Print our screen to the terminal
     }
+}
+
+void printFrame(std::vector<RLE_JEW> &encode, std::ofstream &cacheVideo) {
+    static std::size_t vecSize{};
+    const auto encodeSize{ encode.size() };
+
+    while (vecSize < encodeSize) {
+        if (encode[vecSize].grayVal == 999) {
+            cacheVideo << "===FRAME===\n";
+        } else {
+            cacheVideo << encode[vecSize].count << ',' << encode[vecSize].grayVal << ','
+            << encode[vecSize].repeat << '\n';
+        }
+        vecSize++;
+    }
+
+    vecSize = encodeSize;
+}
+
+void Video::cacheVideo(cv::Mat &videoFrame) {
+    constexpr std::pair<uint16_t, uint16_t> frameCode{ 999, 999 };
+    constexpr RLE_JEW frameCode2{ 0, 999, 0 };
+    std::ofstream cacheVideo("cache.vta");
+
+    m_video.read(videoFrame);
+
+    const auto videoFrameCols{ videoFrame.cols };
+    const auto videoFrameRows{ videoFrame.rows };
+
+    const auto frames { static_cast<int>(getFrameCount()) };
+    const auto interval { std::max(1, frames / 4)};
+    const auto fps { m_fps };
+
+    cacheVideo << "FRAMES:" << frames << '\n' << "FPS:" << fps << '\n';
+
+    std::vector<RLE_JEW> encode2{};
+    std::vector<int> rowData{};
+    encode2.reserve(videoFrameRows * videoFrameCols);
+    rowData.resize(videoFrameCols);
+
+    for (int frameCount{ 1 }; frameCount < frames; frameCount++) {
+        m_video.read(videoFrame);
+        cv::cvtColor(videoFrame, videoFrame, cv::COLOR_BGR2GRAY);
+
+        for (int rowCount{}; rowCount < videoFrameRows; rowCount++) {
+            const uchar *pixel { videoFrame.ptr<uchar>(rowCount) };
+            for (int colCount{}; colCount < videoFrameCols; colCount++) {
+                rowData[colCount] = pixel[colCount];
+            }
+            rleEncode(rowData, encode2);
+        }
+        encode2.push_back(frameCode2);
+
+        std::cout << "FRAME: " << frameCount << '\n';
+    }
+
+    cacheVideo.close();
 }

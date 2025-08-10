@@ -27,6 +27,7 @@ public:
 
     std::vector<std::string> frameToAscii(cv::Mat& videoFrame);
     void playAscii(cv::Mat& videoFrame);
+    void cacheVideo(cv::Mat& videoFrame);
 };
 
 #endif //VIDEO_H

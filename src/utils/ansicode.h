@@ -2,6 +2,10 @@
 #define ANSICODE_H
 
 namespace ansi {
+    enum CursorToggle {
+        OFF = 0,
+        ON = 1,
+    };
     void clearScreen();
     void moveTopLeft();
     void toggleCursor(const bool cursorState);
