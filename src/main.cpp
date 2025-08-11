@@ -15,12 +15,6 @@
 #include "utils/ansicode.h"
 
 namespace Program{
-    // namespace Command {
-    //     constexpr std::string_view play{"play"};
-    //     constexpr std::string_view help{"help"};
-    //     constexpr std::string_view cache{"cache"};
-    // }
-
     namespace Parameter {
         constexpr std::array<std::string_view, 2> file {"--file", "-f"};
         constexpr std::array<std::string_view, 2> cache {"--cache", "-c"};
@@ -61,7 +55,7 @@ namespace Program{
 
 }
 
-bool isCorrectPath(std::string_view path, Program::FILE_ERROR &errorType) {
+bool isCorrectPath(const std::string_view path, Program::FILE_ERROR &errorType) {
     using namespace Program;
     if (!path.starts_with('/') && !path.starts_with("~/")) {
         errorType = WRONG_PATH;
@@ -108,31 +102,6 @@ void printError(const Program::FILE_ERROR ERROR_TYPE) {
         << "\t~/video/sample.mp4" << std::endl;
 
     std::exit(1);
-}
-
-void playVideoFile() {
-    Video userVideo{ Program::State::Settings.videoPath };
-    cv::Mat videoFrame{};
-
-    ansi::toggleCursor(ansi::CursorToggle::OFF);
-    ansi::clearScreen();
-    userVideo.playAscii(videoFrame);
-    ansi::clearScreen();
-}
-
-void playCommand() {
-    using namespace Program;
-    using namespace std::ranges;
-
-    if (State::Args.parameter == "--file" || State::Args.parameter == "-f") {
-        State::Settings.videoPath = State::Args.path;
-        playVideoFile();
-    }
-
-    if (State::Args.parameter == "--cache" || State::Args.parameter == "-c") {
-        std::cerr << "No such functional yet! :(\n";
-        std::exit(-1);
-    }
 }
 
 void parseCliArguments(const char **argv, const int argc) {
@@ -184,11 +153,43 @@ void parseCliArguments(const char **argv, const int argc) {
     }
 }
 
+void playVideo() {
+    using namespace Program;
+    Video userVideo{ State::Settings.videoPath };
+    cv::Mat videoFrame{};
+
+    ansi::toggleCursor(ansi::CursorToggle::OFF);
+    ansi::clearScreen();
+    userVideo.playAscii(videoFrame);
+    ansi::clearScreen();
+}
+
+void printHelp() {
+    std::cout << "Usage:\n"
+            << "   ./vta play <PATH>\tPlay the specified file or media from the given path.\n"
+            << "   ./vta help\t Show this help message.\n\n"
+            << "Commands:\n"
+            << "   play\tPlay a file. <PATH> must be a valid file path.\n"
+            << "   help\tDisplay this help message and exit.\n\n"
+            << "Examples:\n"
+            << "   ./vta play /home/user/video.mp4\n"
+            << "   ./vta help\n";
+    std::exit(0);
+}
+
+void initFromArgs() {
+    using namespace Program;
+
+    if (State::Args.command == "play") {
+        playVideo();
+    } else {
+        printHelp();
+    }
+}
+
 int main(const int argc, const char **argv) {
     std::atexit(ansi::showCursor);
     std::signal(SIGINT, ansi::showCursor);
-
-    // std::cout << "argc: " << argc << '\n';
 
     using namespace ftxui;
     using namespace std::chrono_literals;
@@ -197,17 +198,7 @@ int main(const int argc, const char **argv) {
     parseCliArguments(argv, argc);
     State::Settings.videoPath = State::Args.path;
 
-    Video userVideo{ State::Settings.videoPath };
-    cv::Mat videoFrame{};
-
-    ansi::toggleCursor(ansi::CursorToggle::OFF);
-    ansi::clearScreen();
-    userVideo.playAscii(videoFrame);
-    ansi::clearScreen();
-
-    std::cout << "isVerbose: " << Program::State::Settings.isVerbose << '\n'
-                << "isHelp: " << Program::State::Settings.isHelp << '\n'
-                << "filePath: " << Program::State::Settings.videoPath << '\n';
+    initFromArgs();
 
     return 0;
 }

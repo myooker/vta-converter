@@ -1,5 +1,4 @@
 #include "video.h"
-#include "engine/rle.h"
 
 #include <thread>
 #include <opencv2/imgproc.hpp>
@@ -7,14 +6,10 @@
 #include "engine/constants.h"
 #include "ftxui/screen/screen.hpp"
 
-#include "engine/constants.h"
 #include "engine/scaling.h"
 #include "ftxui/dom/elements.hpp"
 
 #include <iostream>
-#include <fstream>
-
-
 
 std::vector<std::string> Video::frameToAscii(cv::Mat& videoFrame) {
     const std::size_t frameRowSize{ static_cast<std::size_t>( videoFrame.rows )};    // Get frame's row f(x) size
@@ -72,21 +67,4 @@ void Video::playAscii(cv::Mat& videoFrame) {
         // ansi::clearScreen();    // Clear terminal screen
         screen.Print(); // Print our screen to the terminal
     }
-}
-
-void printFrame(std::vector<RLE_JEW> &encode, std::ofstream &cacheVideo) {
-    static std::size_t vecSize{};
-    const auto encodeSize{ encode.size() };
-
-    while (vecSize < encodeSize) {
-        if (encode[vecSize].grayVal == 999) {
-            cacheVideo << "===FRAME===\n";
-        } else {
-            cacheVideo << encode[vecSize].count << ',' << encode[vecSize].grayVal << ','
-            << encode[vecSize].repeat << '\n';
-        }
-        vecSize++;
-    }
-
-    vecSize = encodeSize;
 }
