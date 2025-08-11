@@ -1,1 +1,4 @@
-/src/.idea
+src/.idea
+src/cmake-build-debug
+src/main.cpp.back
+.idea
