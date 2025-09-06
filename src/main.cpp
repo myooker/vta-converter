@@ -10,64 +10,55 @@
 #include "sys/stat.h"
 
 namespace Program{
-    namespace Parameter {
-        constexpr std::array<std::string_view, 2> file {"--file", "-f"};
-        constexpr std::array<std::string_view, 2> cache {"--cache", "-c"};
-    }
-
     struct cliArgs {
         std::string_view command{};
-        std::string_view parameter{};
         std::string_view path{};
     };
 
     struct Settings {
         std::string videoPath{"None"};
-        bool isVerbose{ false };
         bool isHelp{ false };
     };
 
     enum FILE_ERROR {
-        NEGRO_ERROR,
         NOT_EXIST,
         WRONG_FORM,
         WRONG_PATH,
         NO_OPTION,
         NO_PATH,
+        UNK_COMMAND,
     };
 
     enum ARG_INDEX {
         PROGRAM = 0,
         COMMAND = 1,
-        PARAMETER = 2,
-        PATH = 3,
+        PATH = 2,
     };
 
     namespace State {
         cliArgs Args{};
         Settings Settings{};
     }
-
 }
 
+using namespace Program;
+
 bool isFileExist(const std::string_view path) {
-    struct stat buffer;
-    std::string temp{ path };
+    struct stat buffer{};
+    const std::string temp{ path };
     return stat(temp.c_str(), &buffer) == 0;
 }
 
-bool isCorrectPath(const std::string_view path, Program::FILE_ERROR &errorType) {
-    using namespace Program;
+bool isCorrectPath(const std::string_view path, FILE_ERROR &errorType) {
     if (!path.starts_with('/') && !path.starts_with("~/")) {
         errorType = WRONG_PATH;
         return false;
     }
-
-    if (!path.ends_with(".mp4")) {                  // Add support for other formats that OpenCV supports
+    //TODO: Add other formats that OpenCV can work with
+    if (!path.ends_with(".mp4")) {
         errorType = WRONG_FORM;
         return false;
     }
-
     if (!isFileExist(path)) {
         errorType = NOT_EXIST;
         return false;
@@ -76,8 +67,7 @@ bool isCorrectPath(const std::string_view path, Program::FILE_ERROR &errorType) 
     return true;
 }
 
-void printError(const Program::FILE_ERROR ERROR_TYPE) {
-    using namespace Program;
+void printError(const FILE_ERROR ERROR_TYPE) {
     switch (ERROR_TYPE) {
         case WRONG_FORM:
             std::cout << "error: incorrect video format\n\n";
@@ -90,66 +80,55 @@ void printError(const Program::FILE_ERROR ERROR_TYPE) {
             break;
         case NO_PATH:
             std::cout << "error: no path provided\n"
-                    << "hint: use --file <PATH> to specify a video file\n\n";
+                    << "hint: use 'play <PATH>' to specify a video file\n\n";
             break;
         case NO_OPTION:
-            std::cout << "error: missing required option\n"
-                     << "hint: expected --file <PATH> or --cache <PATH> after the command\n\n";
+            ;
+        case UNK_COMMAND:
+            std::cout << "error: unknown command '" << State::Args.command << "'\n"
+                    << "hint: use 'help' to see available commands\n\n";
         default:;
     }
-
     std::cout << "Make sure to:\n"
         << "- Use absolute path to an existing file\n"
         << "- Avoid using unsupported character or symbols\n\n"
         << "Example:\n"
-        << "\t/home/username/video/sample.mp4\n"
-        << "\t~/video/sample.mp4" << std::endl;
+        << "\t./vta play /home/username/video/sample.mp4\n"
+        << "\t./vta play ~/video/sample.mp4" << std::endl;
 
     std::exit(1);
 }
 
 void parseCliArguments(const char **argv, const int argc) {
-    using namespace Program;
     using namespace std::ranges;
 
     FILE_ERROR ERROR_TYPE;
-
     for (std::size_t i{1}; i < argc; i++) {
         if (argv[i] == nullptr) {
             std::cout << "nullptr!!!\n";
             std::exit(-1);
         }
-
         const std::string_view tempArg{ argv[i] };
 
         if (i == COMMAND) {
             if (tempArg == "play") {
+                if (argc < 3)
+                    printError(NO_PATH);
+
                 State::Args.command = tempArg;
                 continue;
             }
-
             if (tempArg == "help") {
                 State::Args.command = tempArg;
                 continue;
             }
-        }
-
-        if (i == PARAMETER) {
-            if (const auto it = find(Parameter::file, tempArg); it != Parameter::file.end()) {
-                State::Args.parameter = tempArg;
-                continue;
-            }
-
-            if (const auto it = find(Parameter::cache, tempArg); it != Parameter::cache.end()) {
-                State::Args.parameter = tempArg;
-                continue;
-            }
+            State::Args.command = tempArg;
+            printError(UNK_COMMAND);
         }
 
         if (i == PATH) {
             if (isCorrectPath(tempArg, ERROR_TYPE)) {
                 State::Args.path = tempArg;
-                continue;
             } else {
                 printError(ERROR_TYPE);
             }
@@ -158,7 +137,6 @@ void parseCliArguments(const char **argv, const int argc) {
 }
 
 void playVideo() {
-    using namespace Program;
     Video userVideo{ State::Settings.videoPath };
     cv::Mat videoFrame{};
 
@@ -171,10 +149,10 @@ void playVideo() {
 void printHelp() {
     std::cout << "Usage:\n"
             << "   ./vta play <PATH>\tPlay the specified file or media from the given path.\n"
-            << "   ./vta help\t Show this help message.\n\n"
+            << "   ./vta help\t\tShow this help message.\n\n"
             << "Commands:\n"
-            << "   play\tPlay a file. <PATH> must be a valid file path.\n"
-            << "   help\tDisplay this help message and exit.\n\n"
+            << "   play\t\t\tPlay a file. <PATH> must be a valid file path.\n"
+            << "   help\t\t\tDisplay this help message and exit.\n\n"
             << "Examples:\n"
             << "   ./vta play /home/user/video.mp4\n"
             << "   ./vta help\n";
@@ -182,13 +160,10 @@ void printHelp() {
 }
 
 void initFromArgs() {
-    using namespace Program;
-
-    if (State::Args.command == "play") {
+    if (State::Args.command == "play")
         playVideo();
-    } else {
+    else
         printHelp();
-    }
 }
 
 int main(const int argc, const char **argv) {
@@ -197,7 +172,6 @@ int main(const int argc, const char **argv) {
 
     using namespace ftxui;
     using namespace std::chrono_literals;
-    using namespace Program;
 
     parseCliArguments(argv, argc);
     State::Settings.videoPath = State::Args.path;

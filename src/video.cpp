@@ -1,14 +1,10 @@
 #include "video.h"
-
 #include <thread>
 #include <opencv2/imgproc.hpp>
-
 #include "engine/constants.h"
 #include "ftxui/screen/screen.hpp"
-
 #include "engine/scaling.h"
 #include "ftxui/dom/elements.hpp"
-
 #include <iostream>
 
 std::vector<std::string> Video::frameToAscii(cv::Mat& videoFrame) {
@@ -42,15 +38,17 @@ void Video::playAscii(cv::Mat& videoFrame) {
 
     for (int frame{}; frame < static_cast<int>(getFrameCount()); frame++) {
         auto frameStart { steady_clock::now() };
-        auto screen { Screen::Create(Terminal::Size()) };   // Create a screen with size of current terminal
-        m_video.read(videoFrame);                   // Reads 1st frame and place it to the testFrame
+        auto screen { Screen::Create(Terminal::Size()) };      // Create a screen with size of current terminal
+        m_video.read(videoFrame);                                     // Reads 1st frame and place it to the testFrame
         const auto terminalSize { Terminal::Size() };
         const double scale { scalingFactor(videoFrame, terminalSize) }; // Calculate scale for the frame
 
         cv::resize(videoFrame, videoFrame, cv::Size(), scale, scale * vta::ASCII_VERTICAL_SCALE);
-        cv::cvtColor(videoFrame, videoFrame, cv::COLOR_RGB2GRAY);               // Convert colors to GRAY
+        cv::cvtColor(videoFrame, videoFrame, cv::COLOR_RGB2GRAY);
 
-        Elements terminalFrame{};   // Here we will store our ASCII rows
+        // Here we will store our ASCII rows
+        Elements terminalFrame{};
+        terminalFrame.reserve(64);
 
         // Read ASCII frame push it to Elements as Element(center(text(frameLine))):
         // Centered string (text) from frameLine
@@ -63,8 +61,8 @@ void Video::playAscii(cv::Mat& videoFrame) {
         // Timer representing rate between frames, or just FPS
         std::this_thread::sleep_for(duration<double>(getFpsDelay() - delay));
         Element frameT { center(vbox(terminalFrame))};  // Use our Elements as one unite Element frameT
+        screen.Clear();
         Render(screen, frameT); // Render frameT on our screen
-        // ansi::clearScreen();    // Clear terminal screen
         screen.Print(); // Print our screen to the terminal
     }
 }

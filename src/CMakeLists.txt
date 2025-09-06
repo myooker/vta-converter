@@ -33,3 +33,5 @@ target_link_libraries(vidtoascii
         ftxui::screen
         ${OpenCV_LIBS}
 )
+
+set_target_properties(vidtoascii PROPERTIES OUTPUT_NAME "vta")
