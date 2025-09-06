@@ -2,15 +2,12 @@
 #include <thread>
 #include <csignal>
 #include <cstdlib>
-
 #include <opencv4/opencv2/videoio.hpp>
-
 #include <ftxui/screen/screen.hpp>
-
 #include <filesystem>
-
 #include "video.h"
 #include "utils/ansicode.h"
+#include "sys/stat.h"
 
 namespace Program{
     namespace Parameter {
@@ -53,6 +50,12 @@ namespace Program{
 
 }
 
+bool isFileExist(const std::string_view path) {
+    struct stat buffer;
+    std::string temp{ path };
+    return stat(temp.c_str(), &buffer) == 0;
+}
+
 bool isCorrectPath(const std::string_view path, Program::FILE_ERROR &errorType) {
     using namespace Program;
     if (!path.starts_with('/') && !path.starts_with("~/")) {
@@ -65,7 +68,10 @@ bool isCorrectPath(const std::string_view path, Program::FILE_ERROR &errorType) 
         return false;
     }
 
-    // Add is File exists checker
+    if (!isFileExist(path)) {
+        errorType = NOT_EXIST;
+        return false;
+    }
 
     return true;
 }
