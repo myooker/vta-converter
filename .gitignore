@@ -1,4 +1,7 @@
-src/.idea
-src/cmake-build-debug
-src/main.cpp.back
-.idea
+# Ignore build directories
+/build/
+/cmake-build-debug/
+.idea/
+
+# Ignore backup files
+*.back

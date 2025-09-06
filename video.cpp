@@ -1,11 +1,11 @@
 #include "video.h"
+#include <iostream>
 #include <thread>
 #include <opencv2/imgproc.hpp>
 #include "engine/constants.h"
-#include "ftxui/screen/screen.hpp"
 #include "engine/scaling.h"
 #include "ftxui/dom/elements.hpp"
-#include <iostream>
+#include "ftxui/screen/screen.hpp"
 
 std::vector<std::string> Video::frameToAscii(cv::Mat& videoFrame) {
     const std::size_t frameRowSize{ static_cast<std::size_t>( videoFrame.rows )};    // Get frame's row f(x) size
