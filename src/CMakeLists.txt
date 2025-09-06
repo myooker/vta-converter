@@ -15,8 +15,6 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 
 add_executable(vidtoascii
         main.cpp
-        animation.cpp
-        animation.h
         video.cpp
         video.h
         utils/debug_func.cpp

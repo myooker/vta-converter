@@ -3,11 +3,9 @@
 #include <csignal>
 #include <cstdlib>
 
-#include <opencv4/opencv2/imgproc.hpp>
 #include <opencv4/opencv2/videoio.hpp>
 
 #include <ftxui/screen/screen.hpp>
-#include <ftxui/dom/elements.hpp>
 
 #include <filesystem>
 
