@@ -47,8 +47,8 @@ void Video::playAscii(cv::Mat& videoFrame) {
         const auto terminalSize { Terminal::Size() };
         const double scale { scalingFactor(videoFrame, terminalSize) }; // Calculate scale for the frame
 
-        cv::cvtColor(videoFrame, videoFrame, cv::COLOR_RGB2GRAY);               // Convert colors to GRAY
         cv::resize(videoFrame, videoFrame, cv::Size(), scale, scale * vta::ASCII_VERTICAL_SCALE);
+        cv::cvtColor(videoFrame, videoFrame, cv::COLOR_RGB2GRAY);               // Convert colors to GRAY
 
         Elements terminalFrame{};   // Here we will store our ASCII rows
 
