@@ -39,6 +39,8 @@ namespace Program{
         cliArgs Args{};
         Settings Settings{};
     }
+
+    constexpr std::array supportedFormats{ ".avi", ".mp4", ".mov", ".mkv", ".flv", ".wmv", ".3gp" };
 }
 
 using namespace Program;
