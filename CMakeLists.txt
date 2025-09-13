@@ -25,7 +25,6 @@ include_directories(
 add_executable(vta
         main.cpp
         video.cpp
-        utils/debug_func.cpp
         utils/ansicode.cpp
         engine/scaling.cpp
         engine/constants.cpp
@@ -44,7 +43,6 @@ install(TARGETS vta
 
 install(FILES
         video.h
-        utils/debug_func.h
         utils/ansicode.h
         engine/scaling.h
         engine/constants.h
