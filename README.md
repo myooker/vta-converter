@@ -1,7 +1,8 @@
 # Video to ASCII converter
 Video to ASCII converter converts any video to playable ASCII animation inside a terminal.
 
-Made this project as a C++ practice. If you find any weak/bad/awful solutions -- please don't mind telling me about them :).
+Made this project as a C++ practice. 
+If you find any weak/bad/awful solutions -- please don't mind telling me about them :).
 
 ## Features
 - Supports the following formats:

@@ -48,7 +48,6 @@ void Video::playAscii(cv::Mat& videoFrame) {
 
         // Here we will store our ASCII rows
         Elements terminalFrame{};
-        terminalFrame.reserve(64);
 
         // Read ASCII frame push it to Elements as Element(center(text(frameLine))):
         // Centered string (text) from frameLine

@@ -5,7 +5,6 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Fetch FTXUI
 include(FetchContent)
 FetchContent_Declare(
         ftxui
@@ -14,11 +13,15 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(ftxui)
 
-# Find OpenCV
 find_package(OpenCV REQUIRED core highgui imgcodecs videoio imgproc)
-include_directories(${OpenCV_INCLUDE_DIRS})
 
-# Define executable
+include_directories(
+        ${OpenCV_INCLUDE_DIRS}
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/utils
+        ${CMAKE_CURRENT_SOURCE_DIR}/engine
+)
+
 add_executable(vta
         main.cpp
         video.cpp
@@ -28,28 +31,17 @@ add_executable(vta
         engine/constants.cpp
 )
 
-target_include_directories(vta
-        PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}
-        ${CMAKE_CURRENT_SOURCE_DIR}/utils
-        ${CMAKE_CURRENT_SOURCE_DIR}/engine
-)
-
-# Link libraries
 target_link_libraries(vta
         PRIVATE
         ftxui::dom
         ftxui::screen
-        ${OpenCV_LIBS}
+        ${OpenCV_LIBRARIES}
 )
 
-# Installation
-# Install the executable
 install(TARGETS vta
         RUNTIME DESTINATION bin
 )
 
-# Install headers
 install(FILES
         video.h
         utils/debug_func.h

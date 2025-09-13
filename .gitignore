@@ -1,7 +1,4 @@
-# Ignore build directories
 /build/
 /cmake-build-debug/
 .idea/
-
-# Ignore backup files
 *.back
