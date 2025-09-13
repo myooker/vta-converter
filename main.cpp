@@ -51,13 +51,21 @@ bool isFileExist(const std::string_view path) {
     return stat(temp.c_str(), &buffer) == 0;
 }
 
+bool doesSupport(const std::string_view path) {
+    for (const auto i : supportedFormats) {
+        if (path.ends_with(i))
+            return true;
+    }
+    return false;
+}
+
 bool isCorrectPath(const std::string_view path, FILE_ERROR &errorType) {
     if (!path.starts_with('/') && !path.starts_with("~/")) {
         errorType = WRONG_PATH;
         return false;
     }
     //TODO: Add other formats that OpenCV can work with
-    if (!path.ends_with(".mp4")) {
+    if (!doesSupport(path)) {
         errorType = WRONG_FORM;
         return false;
     }
@@ -95,8 +103,8 @@ void printError(const FILE_ERROR ERROR_TYPE) {
         << "- Use absolute path to an existing file\n"
         << "- Avoid using unsupported character or symbols\n\n"
         << "Example:\n"
-        << "\t./vta play /home/username/video/sample.mp4\n"
-        << "\t./vta play ~/video/sample.mp4" << std::endl;
+        << "\tvta play /home/username/video/sample.mp4\n"
+        << "\tvta play ~/video/sample.mp4" << std::endl;
 
     std::exit(1);
 }
@@ -150,14 +158,14 @@ void playVideo() {
 
 void printHelp() {
     std::cout << "Usage:\n"
-            << "   ./vta play <PATH>\tPlay the specified file or media from the given path.\n"
-            << "   ./vta help\t\tShow this help message.\n\n"
+            << "   vta play <PATH>\tPlay the specified file or media from the given path.\n"
+            << "   vta help\t\tShow this help message.\n\n"
             << "Commands:\n"
             << "   play\t\t\tPlay a file. <PATH> must be a valid file path.\n"
             << "   help\t\t\tDisplay this help message and exit.\n\n"
             << "Examples:\n"
-            << "   ./vta play /home/user/video.mp4\n"
-            << "   ./vta help\n";
+            << "   vta play /home/user/video.mp4\n"
+            << "   vta help\n";
     std::exit(0);
 }
 
