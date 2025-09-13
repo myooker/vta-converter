@@ -12,7 +12,7 @@ If you find any weak/bad/awful solutions -- please don't mind telling me about t
 - Run-time converting
 
 ## Dependencies
-#### Install OpenCV:
+### Install OpenCV:
 ```
 # Ubuntu / Debian
 sudo apt install libopencv-dev
@@ -20,10 +20,21 @@ sudo apt install libopencv-dev
 # Arch / Arch-based
 sudo pacman -S opencv
 ```
+### Install CMake:
+```
+# Ubuntu / Debian
+sudo apt install cmake
+
+# Arch / Arch-based
+sudo pacman -S cmake
+```
 
 ## Installation
-WIP
-
+```
+git clone https://github.com/myooker/vta-converter.git vta
+cd vta
+sudo make install
+```
 
 
 ## Usage
@@ -38,3 +49,4 @@ vta play ~/videos/sample.mp4
 vta help
 ```
 ## License
+lol
