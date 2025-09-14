@@ -52,4 +52,4 @@ vta play ~/videos/sample.mp4
 vta help
 ```
 ## License
-lol
+MIT
